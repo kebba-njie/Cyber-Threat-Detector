@@ -1,0 +1,21 @@
+========================================
+       CYBER THREAT REPORT
+========================================
+Generated: 2026-07-21 12:42:13.365224
+
+Threat: Brute Force Attack
+Event: LOGIN_FAILED 192.168.1.10
+Risk Level: HIGH
+Evidence: 5 failed login attempts
+
+Threat: Port Scanning
+Event: PORT_SCAN 10.0.0.5
+Risk Level: MEDIUM
+Evidence: 3 scan attempts
+
+Threat: DoS Attack
+Event: DOS_ATTACK 172.16.0.8
+Risk Level: CRITICAL
+Evidence: 5 attack requests
+
+Security Scan Completed.

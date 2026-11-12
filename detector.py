@@ -11,6 +11,13 @@ REPORT_FILE = BASE_DIR / "threat_report.txt"
 
 TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
 
+VALID_EVENT_TYPES = {
+    "LOGIN_FAILED",
+    "LOGIN_SUCCESS",
+    "PORT_SCAN",
+    "DOS_ATTACK"
+}
+
 
 def display_banner():
     print("=" * 45)
@@ -19,24 +26,79 @@ def display_banner():
 
 
 def read_logs():
+
+    valid_logs = []
+    invalid_logs = []
+
     with open(LOG_FILE, "r", encoding="utf-8") as file:
-        return file.readlines()
+
+        for line_number, line in enumerate(file, start=1):
+
+            line = line.strip()
+
+            if not line:
+                continue
+
+            parts = line.split()
+
+            if len(parts) < 4:
+                invalid_logs.append(
+                    f"Line {line_number}: Incomplete log entry"
+                )
+                continue
+
+            timestamp = extract_timestamp(line)
+
+            if timestamp is None:
+                invalid_logs.append(
+                    f"Line {line_number}: Invalid timestamp"
+                )
+                continue
+
+            ip_address = extract_ip(line)
+
+            if ip_address is None:
+                invalid_logs.append(
+                    f"Line {line_number}: Invalid IP address"
+                )
+                continue
+
+            event_type = parts[2]
+
+            if event_type not in VALID_EVENT_TYPES:
+                invalid_logs.append(
+                    f"Line {line_number}: Unknown event type ({event_type})"
+                )
+                continue
+
+            valid_logs.append(line)
+
+    return valid_logs, invalid_logs
 
 
 def extract_timestamp(event):
+
     try:
         timestamp_text = " ".join(event.split()[:2])
-        return datetime.strptime(timestamp_text, TIMESTAMP_FORMAT)
+
+        return datetime.strptime(
+            timestamp_text,
+            TIMESTAMP_FORMAT
+        )
+
     except ValueError:
         return None
 
 
 def extract_ip(event):
+
     for word in event.split():
+
         candidate = word.strip("[](),;")
 
         try:
             return str(ipaddress.ip_address(candidate))
+
         except ValueError:
             continue
 
@@ -63,6 +125,7 @@ def build_event_timeline(logs):
     timeline = []
 
     for event in logs:
+
         event = event.strip()
 
         if not event:
@@ -89,7 +152,11 @@ def analyze_logs(logs):
     ip_activity = defaultdict(Counter)
     threats = []
 
-    events = [event.strip() for event in logs if event.strip()]
+    events = [
+        event.strip()
+        for event in logs
+        if event.strip()
+    ]
 
     for event in events:
 
@@ -99,11 +166,7 @@ def analyze_logs(logs):
             continue
 
         event_parts = event.split()
-
-        if extract_timestamp(event) is not None:
-            event_type = event_parts[2]
-        else:
-            event_type = event_parts[0]
+        event_type = event_parts[2]
 
         ip_activity[ip_address][event_type] += 1
 
@@ -111,29 +174,38 @@ def analyze_logs(logs):
 
         # Brute force detection
         if activity["LOGIN_FAILED"] >= 5:
+
             threats.append({
                 "type": "Brute Force Attack",
                 "ip": ip_address,
                 "severity": "HIGH",
-                "evidence": f'{activity["LOGIN_FAILED"]} failed login attempts'
+                "evidence": (
+                    f'{activity["LOGIN_FAILED"]} failed login attempts'
+                )
             })
 
         # Port scanning detection
         if activity["PORT_SCAN"] >= 3:
+
             threats.append({
                 "type": "Port Scanning",
                 "ip": ip_address,
                 "severity": "MEDIUM",
-                "evidence": f'{activity["PORT_SCAN"]} scanning attempts'
+                "evidence": (
+                    f'{activity["PORT_SCAN"]} scanning attempts'
+                )
             })
 
         # Denial of Service detection
         if activity["DOS_ATTACK"] >= 5:
+
             threats.append({
                 "type": "Denial of Service Attack",
                 "ip": ip_address,
                 "severity": "CRITICAL",
-                "evidence": f'{activity["DOS_ATTACK"]} attack requests'
+                "evidence": (
+                    f'{activity["DOS_ATTACK"]} attack requests'
+                )
             })
 
     ip_risks = {
@@ -155,6 +227,7 @@ def display_ip_activity(ip_activity, ip_risks):
         print(f"Total Events: {sum(activity.values())}")
 
         for event_type, count in activity.items():
+
             print(f"{event_type}: {count}")
 
         print(f"Risk Classification: {ip_risks[ip_address]}")
@@ -211,7 +284,8 @@ def generate_report(
     total_events,
     ip_activity,
     ip_risks,
-    timeline
+    timeline,
+    invalid_logs
 ):
 
     with open(REPORT_FILE, "w", encoding="utf-8") as report:
@@ -219,10 +293,22 @@ def generate_report(
         report.write("CYBER THREAT DETECTOR REPORT\n")
         report.write("=" * 45 + "\n\n")
 
-        report.write(f"Total Events Analyzed: {total_events}\n\n")
+        report.write(f"Valid Events Analyzed: {total_events}\n")
+        report.write(f"Invalid Events Rejected: {len(invalid_logs)}\n\n")
+
+        # Invalid log entries
+        report.write("LOG VALIDATION RESULTS\n")
+        report.write("-" * 45 + "\n")
+
+        if not invalid_logs:
+            report.write("All log entries passed validation.\n")
+
+        else:
+            for error in invalid_logs:
+                report.write(error + "\n")
 
         # IP activity report
-        report.write("IP ADDRESS ACTIVITY\n")
+        report.write("\n\nIP ADDRESS ACTIVITY\n")
         report.write("-" * 45 + "\n")
 
         for ip_address, activity in ip_activity.items():
@@ -231,6 +317,7 @@ def generate_report(
             report.write(f"Total Events: {sum(activity.values())}\n")
 
             for event_type, count in activity.items():
+
                 report.write(f"{event_type}: {count}\n")
 
             report.write(
@@ -245,7 +332,9 @@ def generate_report(
 
             timestamp = item["timestamp"].strftime(TIMESTAMP_FORMAT)
 
-            report.write(f"{timestamp} - {item['event']}\n")
+            report.write(
+                f"{timestamp} - {item['event']}\n"
+            )
 
         # Threat report
         report.write("\n\nDETECTED SECURITY THREATS\n")
@@ -256,11 +345,14 @@ def generate_report(
 
         for threat in threats:
 
-            report.write(f'\n[{threat["severity"]}] {threat["type"]}\n')
+            report.write(
+                f'\n[{threat["severity"]}] {threat["type"]}\n'
+            )
+
             report.write(f'IP Address: {threat["ip"]}\n')
             report.write(f'Evidence: {threat["evidence"]}\n')
 
-    print("Threat Report Generated Successfully!")
+    print("\nThreat Report Generated Successfully!")
 
 
 def main():
@@ -270,11 +362,27 @@ def main():
     print("\nScanning security logs...")
 
     try:
-        logs = read_logs()
+        logs, invalid_logs = read_logs()
 
     except FileNotFoundError:
         print("Error: sample_logs.txt was not found.")
         return
+
+    except (OSError, UnicodeDecodeError) as error:
+        print(f"Error reading security logs: {error}")
+        return
+
+    print(f"\nValid Log Entries: {len(logs)}")
+    print(f"Invalid Log Entries: {len(invalid_logs)}")
+
+    # Display rejected entries
+    if invalid_logs:
+
+        print("\nINVALID LOG ENTRIES")
+        print("-" * 45)
+
+        for error in invalid_logs:
+            print(error)
 
     threats, total_events, ip_activity, ip_risks = analyze_logs(logs)
 
@@ -287,14 +395,16 @@ def main():
     display_threats(threats)
 
     print("\nSecurity Scan Completed!")
-    print(f"Total Events Analyzed: {total_events}")
+    print(f"Total Valid Events Analyzed: {total_events}")
+    print(f"Total Invalid Events Rejected: {len(invalid_logs)}")
 
     generate_report(
         threats,
         total_events,
         ip_activity,
         ip_risks,
-        timeline
+        timeline,
+        invalid_logs
     )
 
 

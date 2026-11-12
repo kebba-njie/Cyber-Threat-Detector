@@ -33,6 +33,21 @@ def extract_ip(event):
     return None
 
 
+def classify_ip_risk(activity):
+
+    if activity["DOS_ATTACK"] >= 5:
+        return "CRITICAL RISK"
+
+    elif activity["LOGIN_FAILED"] >= 5:
+        return "HIGH RISK"
+
+    elif activity["PORT_SCAN"] >= 3:
+        return "MEDIUM RISK"
+
+    else:
+        return "LOW RISK"
+
+
 def analyze_logs(logs):
     events = [log.strip() for log in logs if log.strip()]
 
@@ -57,7 +72,12 @@ def analyze_logs(logs):
         else:
             ip_activity[ip_address]["OTHER"] += 1
 
+    ip_risks = {}
+
     for ip_address, activity in ip_activity.items():
+
+        risk = classify_ip_risk(activity)
+        ip_risks[ip_address] = risk
 
         if activity["LOGIN_FAILED"] >= 5:
             threats.append({
@@ -89,10 +109,10 @@ def analyze_logs(logs):
                 )
             })
 
-    return threats, len(events), ip_activity
+    return threats, len(events), ip_activity, ip_risks
 
 
-def display_ip_activity(ip_activity):
+def display_ip_activity(ip_activity, ip_risks):
 
     print("IP ADDRESS ACTIVITY")
     print("-" * 45)
@@ -110,6 +130,7 @@ def display_ip_activity(ip_activity):
         for event_type, count in activity.items():
             print(f"{event_type}: {count}")
 
+        print("Risk Classification:", ip_risks[ip_address])
         print("-" * 45)
 
 
@@ -129,7 +150,7 @@ def display_threats(threats):
         print("-" * 45)
 
 
-def generate_report(threats, total_events, ip_activity):
+def generate_report(threats, total_events, ip_activity, ip_risks):
 
     with open(REPORT_FILE, "w", encoding="utf-8") as report:
 
@@ -139,7 +160,7 @@ def generate_report(threats, total_events, ip_activity):
         report.write(f"Generated: {datetime.now()}\n")
         report.write(f"Total Events Analyzed: {total_events}\n\n")
 
-        report.write("IP ADDRESS ACTIVITY\n")
+        report.write("IP ADDRESS ACTIVITY AND RISK CLASSIFICATION\n")
         report.write("-" * 45 + "\n")
 
         for ip_address, activity in ip_activity.items():
@@ -148,6 +169,10 @@ def generate_report(threats, total_events, ip_activity):
 
             for event_type, count in activity.items():
                 report.write(f"{event_type}: {count}\n")
+
+            report.write(
+                f"Risk Classification: {ip_risks[ip_address]}\n"
+            )
 
         report.write("\nDETECTED SECURITY THREATS\n")
         report.write("-" * 45 + "\n")
@@ -177,12 +202,12 @@ def main():
         print("Error: sample_logs.txt was not found.")
         return
 
-    threats, total_events, ip_activity = analyze_logs(logs)
+    threats, total_events, ip_activity, ip_risks = analyze_logs(logs)
 
-    display_ip_activity(ip_activity)
+    display_ip_activity(ip_activity, ip_risks)
     display_threats(threats)
 
-    generate_report(threats, total_events, ip_activity)
+    generate_report(threats, total_events, ip_activity, ip_risks)
 
     print("\nSecurity Scan Completed!")
     print("Total Events Analyzed:", total_events)

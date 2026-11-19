@@ -101,6 +101,12 @@ class TestCyberThreatDetector(unittest.TestCase):
         self.assertEqual(len(threats), 1)
         self.assertEqual(threats[0]["type"], "Brute Force Attack")
         self.assertEqual(ip_risks["192.168.1.10"], "HIGH RISK")
+    def test_risk_score_calculation(self):
+        self.assertEqual(detector.calculate_risk_score("LOW"), 25)
+        self.assertEqual(detector.calculate_risk_score("MEDIUM"), 50)
+        self.assertEqual(detector.calculate_risk_score("HIGH"), 75)
+        self.assertEqual(detector.calculate_risk_score("CRITICAL"), 95)
+        self.assertEqual(detector.calculate_risk_score("UNKNOWN"), 0)   
 
 
 if __name__ == "__main__":

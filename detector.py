@@ -124,7 +124,16 @@ def classify_ip_risk(activity):
 
     else:
         return "LOW RISK"
+def calculate_risk_score(severity):
 
+    risk_scores = {
+        "LOW": 25,
+        "MEDIUM": 50,
+        "HIGH": 75,
+        "CRITICAL": 95
+    }
+
+    return risk_scores.get(severity.upper(), 0)
 
 def build_event_timeline(logs):
 
@@ -277,8 +286,11 @@ def display_threats(threats):
 
     for threat in threats:
 
+        risk_score = calculate_risk_score(threat["severity"])
+
         print(f'[{threat["severity"]}] {threat["type"]}')
         print(f'IP Address: {threat["ip"]}')
+        print(f'Risk Score: {risk_score}/100')
         print(f'Evidence: {threat["evidence"]}')
         print("-" * 45)
 def generate_report(
@@ -352,8 +364,11 @@ def generate_report(
             )
 
             report.write(f'IP Address: {threat["ip"]}\n')
-            report.write(f'Evidence: {threat["evidence"]}\n')
 
+            risk_score = calculate_risk_score(threat["severity"])
+            report.write(f'Risk Score: {risk_score}/100\n')
+
+            report.write(f'Evidence: {threat["evidence"]}\n')
     print("\nThreat Report Generated Successfully!")
 
 

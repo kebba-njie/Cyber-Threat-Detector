@@ -81,6 +81,27 @@ class TestCyberThreatDetector(unittest.TestCase):
             "CRITICAL RISK"
         )
 
+    def test_custom_brute_force_threshold(self):
+
+        logs = [
+            "2026-11-12 09:00:00 LOGIN_FAILED 192.168.1.10",
+            "2026-11-12 09:01:00 LOGIN_FAILED 192.168.1.10"
+        ]
+
+        custom_thresholds = {
+            "BRUTE_FORCE": 2,
+            "PORT_SCAN": 3,
+            "DOS_ATTACK": 5
+        }
+
+        with patch.dict(detector.DETECTION_THRESHOLDS, custom_thresholds):
+
+            threats, total_events, ip_activity, ip_risks = detector.analyze_logs(logs)
+
+        self.assertEqual(len(threats), 1)
+        self.assertEqual(threats[0]["type"], "Brute Force Attack")
+        self.assertEqual(ip_risks["192.168.1.10"], "HIGH RISK")
+
 
 if __name__ == "__main__":
     unittest.main()

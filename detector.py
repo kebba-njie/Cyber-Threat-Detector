@@ -17,6 +17,12 @@ VALID_EVENT_TYPES = {
     "PORT_SCAN",
     "DOS_ATTACK"
 }
+# Configurable threat detection thresholds
+DETECTION_THRESHOLDS = {
+    "BRUTE_FORCE": 5,
+    "PORT_SCAN": 3,
+    "DOS_ATTACK": 5
+}
 
 
 def display_banner():
@@ -107,13 +113,13 @@ def extract_ip(event):
 
 def classify_ip_risk(activity):
 
-    if activity["DOS_ATTACK"] >= 5:
+    if activity["DOS_ATTACK"] >= DETECTION_THRESHOLDS["DOS_ATTACK"]:
         return "CRITICAL RISK"
 
-    elif activity["LOGIN_FAILED"] >= 5:
+    elif activity["LOGIN_FAILED"] >= DETECTION_THRESHOLDS["BRUTE_FORCE"]:
         return "HIGH RISK"
 
-    elif activity["PORT_SCAN"] >= 3:
+    elif activity["PORT_SCAN"] >= DETECTION_THRESHOLDS["PORT_SCAN"]:
         return "MEDIUM RISK"
 
     else:
@@ -173,7 +179,7 @@ def analyze_logs(logs):
     for ip_address, activity in ip_activity.items():
 
         # Brute force detection
-        if activity["LOGIN_FAILED"] >= 5:
+        if activity["LOGIN_FAILED"] >= DETECTION_THRESHOLDS["BRUTE_FORCE"]:
 
             threats.append({
                 "type": "Brute Force Attack",
@@ -185,7 +191,7 @@ def analyze_logs(logs):
             })
 
         # Port scanning detection
-        if activity["PORT_SCAN"] >= 3:
+        if activity["PORT_SCAN"] >= DETECTION_THRESHOLDS["PORT_SCAN"]:
 
             threats.append({
                 "type": "Port Scanning",
@@ -197,7 +203,7 @@ def analyze_logs(logs):
             })
 
         # Denial of Service detection
-        if activity["DOS_ATTACK"] >= 5:
+        if activity["DOS_ATTACK"] >= DETECTION_THRESHOLDS["DOS_ATTACK"]:
 
             threats.append({
                 "type": "Denial of Service Attack",
@@ -214,25 +220,6 @@ def analyze_logs(logs):
     }
 
     return threats, len(events), ip_activity, ip_risks
-
-
-def display_ip_activity(ip_activity, ip_risks):
-
-    print("\nIP ADDRESS ACTIVITY")
-    print("-" * 45)
-
-    for ip_address, activity in ip_activity.items():
-
-        print(f"IP Address: {ip_address}")
-        print(f"Total Events: {sum(activity.values())}")
-
-        for event_type, count in activity.items():
-
-            print(f"{event_type}: {count}")
-
-        print(f"Risk Classification: {ip_risks[ip_address]}")
-        print("-" * 45)
-
 
 def display_event_timeline(timeline):
 
@@ -262,6 +249,23 @@ def display_event_timeline(timeline):
     )
 
 
+def display_ip_activity(ip_activity, ip_risks):
+
+    print("\nIP ADDRESS ACTIVITY")
+    print("-" * 45)
+
+    for ip_address, activity in ip_activity.items():
+
+        print(f"\nIP Address: {ip_address}")
+
+        for event_type, count in activity.items():
+            print(f"{event_type}: {count}")
+
+        print(f"Risk Level: {ip_risks[ip_address]}")
+
+    print("-" * 45)
+
+
 def display_threats(threats):
 
     print("\nDETECTED SECURITY THREATS")
@@ -277,8 +281,6 @@ def display_threats(threats):
         print(f'IP Address: {threat["ip"]}')
         print(f'Evidence: {threat["evidence"]}')
         print("-" * 45)
-
-
 def generate_report(
     threats,
     total_events,
